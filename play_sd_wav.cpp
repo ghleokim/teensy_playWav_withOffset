@@ -350,9 +350,6 @@ start:
 				state = STATE_PARSE3;
 				didSkip = true;
 				goto start;
-
-				//uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
-				//return ((uint64_t)offset * b2m) >> 32;
 			}
 
 			leftover_bytes = 0;
