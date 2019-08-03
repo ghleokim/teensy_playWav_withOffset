@@ -7,7 +7,7 @@ The purpose of this modification is to play `.wav` starting from the wanted offs
 - `positionMillis()` and `lengthMillis()` does not work well. Should be fixed.
 
 ## How to add
-`for mac`: 
+**for mac**: 
 
 1. Go to `Applications/Arduino/Contents/Java/hardware/teensy/avr/libraries/Audio`.
 
@@ -23,25 +23,30 @@ The purpose of this modification is to play `.wav` starting from the wanted offs
     playWav1.play('TEST.WAV', 100000)
     ```
 
-`for windows`:
+**for windows**:
 
-    TBA
+TBA
 
 
 ## New Variables / Functions
-- `bool didSkip`
-    - this checks if the file should be skipped or not(if offset is 0 or not)
-    
-- `uint32_t play_offset`
-    - currently this is used to seek wavfile as bytes.
-    - will be changed to get millis input and convert into bytes.
+`bool didSkip`
 
-- (not used)`uint64_t file_offest`
-    - this will be used to seek wavfile when millis is converted into bytes.
+this checks if the file should be skipped or not(if offset is 0 or not)
+    
+`uint32_t play_offset`
+
+currently this is used to seek wavfile as bytes.
+
+will be changed to get millis input and convert into bytes.
+
+(not used)`uint64_t file_offset`
+
+this will be used to seek wavfile when millis is converted into bytes.
 
 
 ## Modified Variables / Functions
-- `bool AudioPlaySdWav::play(const char *filename, uint32_t offset);`
+`bool AudioPlaySdWav::play(const char *filename, uint32_t offset)`
+
     ```arduino
     bool AudioPlaySdWav::play(const char *filename, uint32_t offset)
     {
@@ -61,10 +66,14 @@ The purpose of this modification is to play `.wav` starting from the wanted offs
         return true;
     }
     ```
-    - added `uint32_t offset` to get the offset input.
-    - `bool didSkip` shows whether the file should be skipped or not.
 
-- `void AudioPlaySdWav::consume(void)`
+- added `uint32_t offset` to get the offset input.
+- `bool didSkip` shows whether the file should be skipped or not.
+
+---
+
+`void AudioPlaySdWav::consume(void)`
+
     ```arduino
     bool AudioPlaySdWav::consume(uint32_t size)
     {
@@ -114,7 +123,8 @@ The purpose of this modification is to play `.wav` starting from the wanted offs
     ...
     }
     ```
-    - added a step to fetch data chunk from the wanted offset in STATE_PARSE3. This step will only be done once if `offset` is not 0.
 
+- added a step to fetch data chunk from the wanted offset in STATE_PARSE3. This step will only be done once if `offset` is not 0.
 
+---
 modified and written by Leo Kim(https://www.github.com/gh.leokim)
