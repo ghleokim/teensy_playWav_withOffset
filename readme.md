@@ -2,66 +2,63 @@
 These code is originally from Teensy Audio Library(https://github.com/PaulStoffregen/Audio).
 The purpose of this modification is to play `.wav` starting from the wanted offset(i.e from the 0:30 to the end).
 
-## To do:
-- The offset should be in `bytes`. This will be changed into `milliseconds`. 
-- `positionMillis()` and `lengthMillis()` does not work well. Should be fixed.
+## Done:
+- 04Aug2019
+    - ~~The offset should be in `bytes`. This will be changed into `milliseconds`.~~
+    - ~~`positionMillis()` and `lengthMillis()` does not work well. Should be fixed.~~
 
 ## How to add
-**for mac**: 
+### **for mac**: 
 
 1. Go to `Applications/Arduino/Contents/Java/hardware/teensy/avr/libraries/Audio`.
 
-2. Replace `play_sd_wav.h` and `play_sd_wav.cpp` with given files.
+2. Replace `Audio.h`, `play_sd_wav.h` and `play_sd_wav.cpp` with given files.
 
     (Don't forget to backup. Just in case there're original files included in this repository.)
     
     2-1. If path is not found, go to the path where the Arduino Application is. Then if you do `Show Package Contents` the path will be there.
 
-3. In the .ino file, be sure to use the offset like below:
+3. In the .ino file, the function can be used as it was, but also millisecond input can be used as well.(teensy example/WavFilePlayer is the reference.)
 
     ```arduino
-    playWav1.play('TEST.WAV', 100000)
+    //both available
+    playWav1.play('TEST.WAV')
+    playWav1.play('TEST.WAV', 60000)
     ```
 
-**for windows**:
+### **for windows**:
 
 TBA
 
 
 ## New Variables / Functions
-`bool didSkip`
+### `bool didSkip`
 
 this checks if the file should be skipped or not(if offset is 0 or not)
     
-`uint32_t play_offset`
+### `uint32_t play_offset`
 
-currently this is used to seek wavfile as bytes.
+this is converted into file_offset with bytes.
 
-will be changed to get millis input and convert into bytes.
+this is used to seek wavfile as bytes(if not converted).
 
-(not used)`uint64_t file_offset`
+### `uint32_t file_offset`
 
-this will be used to seek wavfile when millis is converted into bytes.
+this is used to seek wavfile when millis is converted into bytes.
 
 
 ## Modified Variables / Functions
-`bool AudioPlaySdWav::play(const char *filename, uint32_t offset)`
+### `bool AudioPlaySdWav::play(const char *filename, uint32_t offset = 0)`
 
     ```arduino
     bool AudioPlaySdWav::play(const char *filename, uint32_t offset)
     {
         ...
         header_offset = 0;
-        //
-        didSkip = false;
-        if (offset == 0) {
-            didSkip = true;
-        }
-        else {
-            didSkip = false;
-        }
+        //could use play_offset as identifier but used bool to be clear
+        if (offset == 0) didSkip = true;
+        else didSkip = false;
         play_offset = offset;
-        //
         state = STATE_PARSE1;
         return true;
     }
@@ -72,7 +69,7 @@ this will be used to seek wavfile when millis is converted into bytes.
 
 ---
 
-`void AudioPlaySdWav::consume(void)`
+### `void AudioPlaySdWav::consume(void)`
 
     ```arduino
     bool AudioPlaySdWav::consume(uint32_t size)
@@ -98,7 +95,12 @@ this will be used to seek wavfile when millis is converted into bytes.
                 // below will depend upon this and fail if not even.
                 
                 if (didSkip == false) {
-                    wavfile.seek(play_offset);
+                    //skip by using millis input
+                    file_offset = offsetMillis2byte(play_offset);
+                    wavfile.seek(file_offset);
+                    //skip by using bytes input
+                    //to skip by using bytes input, uncomment below
+                    //wavfile.seek(play_offset);
                     data_length = 8;
                     header_offset = 8;
                     state = STATE_PARSE3;
@@ -127,4 +129,23 @@ this will be used to seek wavfile when millis is converted into bytes.
 - added a step to fetch data chunk from the wanted offset in STATE_PARSE3. This step will only be done once if `offset` is not 0.
 
 ---
+	
+### `uint32_t AudioPlaySdWav::offsetMillis2byte(uint32_t offset_length)`
+
+    ```arduino
+    uint32_t AudioPlaySdWav::offsetMillis2byte(uint32_t offset_length)
+    {
+        // convert millis input to bytes with b2m and AUDIO_BLOCK_SAMPLES.
+        // to avoid wrong offset length(odd number),
+        // offset_length is scaled down by AUDIO_BLOCK_SAMPLES, converted, and scaled up again.
+        uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
+        uint32_t offset_bytes = (uint32_t)(double)(offset_length * 4294967296.0 / (AUDIO_BLOCK_SAMPLES * b2m));
+        offset_bytes *= AUDIO_BLOCK_SAMPLES;
+        return offset_bytes;
+    }
+    ```
+- added a function to convert millisecond input to byte offset.
+
+---
+
 modified and written by Leo Kim(https://www.github.com/gh.leokim)
