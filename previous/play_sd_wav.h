@@ -36,10 +36,9 @@ class AudioPlaySdWav : public AudioStream
 public:
 	AudioPlaySdWav(void) : AudioStream(0, NULL), block_left(NULL), block_right(NULL) { begin(); }
 	void begin(void);
-	bool play(const char *filename, uint32_t offset = 0);
+	bool play(const char *filename, uint32_t offset);
 	void stop(void);
 	bool isPlaying(void);
-	uint32_t offsetMillis2byte(uint32_t offset_length);
 	uint32_t positionMillis(void);
 	uint32_t lengthMillis(void);
 	virtual void update(void);
@@ -51,8 +50,8 @@ private:
 	uint32_t header[10];		// temporary storage of wav header data
 	uint32_t data_length;		// number of bytes remaining in current section
 	uint32_t total_length;		// number of audio data bytes in file
-	uint32_t play_offset;		// wanted offset with milliseconds
-	uint32_t file_offset;		// wanted offset with bytes
+	uint32_t play_offset;
+	uint64_t file_offset;
 	uint32_t bytes2millis;
 	audio_block_t *block_left;
 	audio_block_t *block_right;

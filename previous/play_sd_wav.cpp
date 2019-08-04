@@ -83,11 +83,17 @@ bool AudioPlaySdWav::play(const char *filename, uint32_t offset)
 	state_play = STATE_STOP;
 	data_length = 20;
 	header_offset = 0;
-	state = STATE_PARSE1;
-	//could use play_offset as identifier but used bool to be clear
-	if (offset == 0) didSkip = true;
-	else didSkip = false;
+	//
+	didSkip = false;
+	if (offset == 0) {
+		didSkip = true;
+	}
+	else {
+		didSkip = false;
+	}
 	play_offset = offset;
+	//
+	state = STATE_PARSE1;
 	return true;
 }
 
@@ -305,14 +311,22 @@ start:
 		buffer_offset += len;
 		data_length -= len;
 		if (data_length > 0) return false;
-		// Serial.print("chunk id = ");
-		// Serial.print(header[0], HEX);
-		// Serial.print(", length = ");
-		// Serial.println(header[1]);
+		//Serial.print("chunk id = ");
+		//Serial.print(header[0], HEX);
+		//Serial.print(", length = ");
+		//Serial.println(header[1]);
+
+		////////////////////////////millis to bytes
+		// if (didSkip == false) {
+		// 	uint64_t b2m = (uint64_t)bytes2millis << 32;
+		// 	uint64_t offset_temp = (uint64_t)play_offset << 32;
+		// 	file_offset = (offset_temp / b2m);
+		// }
+		////////////////////////////
 
 		p += len;
 		size -= len;
-		data_length = header[1];
+		data_length = header[1] - file_offset;
 		if (header[0] == 0x61746164) {
 			//Serial.print("wav: found data chunk, len=");
 			//Serial.println(data_length);
@@ -321,12 +335,16 @@ start:
 			// below will depend upon this and fail if not even.
 			// added
 			if (didSkip == false) {
-				//skip by using millis input
-				file_offset = offsetMillis2byte(play_offset);
-				wavfile.seek(file_offset);
-				//skip by using bytes input
-				//to skip by using bytes input, uncomment below
-				//wavfile.seek(play_offset);
+				//////////////////////////millis to bytes
+				// wavfile.seek(file_offset);
+				//////////////////////////
+
+				// uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
+				// uint64_t file_offset = play_offset << 32;
+				// wavfile.seek((uint32_t)((file_offset / b2m) >> 32));
+
+				wavfile.seek(play_offset);
+
 				data_length = 8;
 				header_offset = 8;
 				state = STATE_PARSE3;
@@ -518,7 +536,7 @@ start:
 
 
 
-//  SD library on Teensy3 at 96 MHz
+// SD library on Teensy3 at 96 MHz
 //  256 byte chunks, speed is 443272 bytes/sec
 //  512 byte chunks, speed is 468023 bytes/sec
 
@@ -595,25 +613,13 @@ bool AudioPlaySdWav::isPlaying(void)
 	return (s < 8);
 }
 
-uint32_t AudioPlaySdWav::offsetMillis2byte(uint32_t offset_length)
-{
-	// convert millis input to bytes with b2m and AUDIO_BLOCK_SAMPLES.
-	// to avoid wrong offset length(odd number),
-	// offset_length is scaled down by AUDIO_BLOCK_SAMPLES, converted, and scaled up again.
-	uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
-	uint32_t offset_bytes = (uint32_t)(double)(offset_length * 4294967296.0 / (AUDIO_BLOCK_SAMPLES * b2m));
-	offset_bytes *= AUDIO_BLOCK_SAMPLES;
-	return offset_bytes;
-}
-
 uint32_t AudioPlaySdWav::positionMillis(void)
 {
 	uint8_t s = *(volatile uint8_t *)&state;
 	if (s >= 8) return 0;
 	uint32_t tlength = *(volatile uint32_t *)&total_length;
 	uint32_t dlength = *(volatile uint32_t *)&data_length;
-	// added file_offset to get precise current location
-	uint32_t offset = tlength - dlength + file_offset;
+	uint32_t offset = tlength - dlength;
 	uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
 	return ((uint64_t)offset * b2m) >> 32;
 }
@@ -627,3 +633,9 @@ uint32_t AudioPlaySdWav::lengthMillis(void)
 	uint32_t b2m = *(volatile uint32_t *)&bytes2millis;
 	return ((uint64_t)tlength * b2m) >> 32;
 }
+
+
+
+
+
+
